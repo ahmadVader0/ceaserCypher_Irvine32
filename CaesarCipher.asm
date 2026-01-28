@@ -123,35 +123,34 @@ DecryptText PROC
 DecryptText ENDP
 
 ; -------------------------------------
-; Core Caesar Cipher logic
+; Core Caesar Cipher logic (fixed)
 ; ESI = text address
 ; EAX = shift value
 ; -------------------------------------
 CaesarCipherCore PROC
+    push ecx                ; save registers
     push ebx
-    push ecx
-    mov ecx, eax            ; Save shift value in ecx
 
+    mov cl, al              ; store shift in CL (8-bit)
 ProcessChar:
-    movzx eax, BYTE PTR [esi]   ; Load character into eax
+    mov al, [esi]           ; load character
     cmp al, 0
     je CipherDone
 
+    ; lowercase letters
     cmp al, 'a'
     jb CheckUpperCase
     cmp al, 'z'
     ja CheckUpperCase
 
-    ; Process lowercase letter
-    sub al, 'a'             ; Convert to 0-25
-    movzx eax, al
-    add eax, ecx            ; Add shift value
-    add eax, 26             ; Add 26 for modulo
-    mov ebx, 26
-    cdq                     ; Sign extend eax to edx:eax
-    idiv ebx                ; Divide by 26
-    mov al, dl              ; Get remainder
-    add al, 'a'             ; Convert back to character
+    sub al, 'a'             ; convert to 0-25
+    add al, cl              ; apply shift
+    ; ensure wrap-around using modulo 26
+    mov bl, 26
+    xor ah, ah
+    div bl                  ; quotient in AL, remainder in AL?
+    mov al, ah              ; take remainder
+    add al, 'a'             ; convert back to char
     mov [esi], al
     jmp NextChar
 
@@ -161,16 +160,13 @@ CheckUpperCase:
     cmp al, 'Z'
     ja NextChar
 
-    ; Process uppercase letter
-    sub al, 'A'             ; Convert to 0-25
-    movzx eax, al
-    add eax, ecx            ; Add shift value
-    add eax, 26             ; Add 26 for modulo
-    mov ebx, 26
-    cdq                     ; Sign extend eax to edx:eax
-    idiv ebx                ; Divide by 26
-    mov al, dl              ; Get remainder
-    add al, 'A'             ; Convert back to character
+    sub al, 'A'             ; convert to 0-25
+    add al, cl              ; apply shift
+    mov bl, 26
+    xor ah, ah
+    div bl                  ; divide by 26
+    mov al, ah              ; remainder
+    add al, 'A'             ; convert back to char
     mov [esi], al
 
 NextChar:
@@ -178,8 +174,8 @@ NextChar:
     jmp ProcessChar
 
 CipherDone:
-    pop ecx
     pop ebx
+    pop ecx
     ret
 CaesarCipherCore ENDP
 
