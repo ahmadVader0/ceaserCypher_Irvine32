@@ -128,8 +128,12 @@ DecryptText ENDP
 ; EAX = shift value
 ; -------------------------------------
 CaesarCipherCore PROC
+    push ebx
+    push ecx
+    mov ecx, eax            ; Save shift value in ecx
+
 ProcessChar:
-    mov al, [esi]
+    movzx eax, BYTE PTR [esi]   ; Load character into eax
     cmp al, 0
     je CipherDone
 
@@ -138,13 +142,16 @@ ProcessChar:
     cmp al, 'z'
     ja CheckUpperCase
 
-    sub al, 'a'
-    add al, al
-    add al, 26
-    mov bl, 26
-    div bl
-    mov al, ah
-    add al, 'a'
+    ; Process lowercase letter
+    sub al, 'a'             ; Convert to 0-25
+    movzx eax, al
+    add eax, ecx            ; Add shift value
+    add eax, 26             ; Add 26 for modulo
+    mov ebx, 26
+    cdq                     ; Sign extend eax to edx:eax
+    idiv ebx                ; Divide by 26
+    mov al, dl              ; Get remainder
+    add al, 'a'             ; Convert back to character
     mov [esi], al
     jmp NextChar
 
@@ -154,13 +161,16 @@ CheckUpperCase:
     cmp al, 'Z'
     ja NextChar
 
-    sub al, 'A'
-    add al, al
-    add al, 26
-    mov bl, 26
-    div bl
-    mov al, ah
-    add al, 'A'
+    ; Process uppercase letter
+    sub al, 'A'             ; Convert to 0-25
+    movzx eax, al
+    add eax, ecx            ; Add shift value
+    add eax, 26             ; Add 26 for modulo
+    mov ebx, 26
+    cdq                     ; Sign extend eax to edx:eax
+    idiv ebx                ; Divide by 26
+    mov al, dl              ; Get remainder
+    add al, 'A'             ; Convert back to character
     mov [esi], al
 
 NextChar:
@@ -168,6 +178,8 @@ NextChar:
     jmp ProcessChar
 
 CipherDone:
+    pop ecx
+    pop ebx
     ret
 CaesarCipherCore ENDP
 
